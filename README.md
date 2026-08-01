@@ -58,6 +58,7 @@ touch production Paperless data or the remote OCR services.
 uv sync --group dev
 uv run ruff format --check .
 uv run ruff check .
+uv run mypy --show-error-codes --warn-unused-configs src/
 uv run pytest -q
 ```
 

@@ -4,15 +4,21 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Any
+from typing import Any, cast
 
 from lxml import html
 
-IGNORED_LABELS = frozenset({"header", "header_image", "footer", "footer_image", "number"})
+from .schemas import InferResult
+
+IGNORED_LABELS = frozenset(
+    {"header", "header_image", "footer", "footer_image", "number"}
+)
 
 
 def _normalize(value: str) -> str:
-    value = unicodedata.normalize("NFC", value).replace("\r\n", "\n").replace("\r", "\n")
+    value = (
+        unicodedata.normalize("NFC", value).replace("\r\n", "\n").replace("\r", "\n")
+    )
     value = re.sub(r"[ \t]+\n", "\n", value)
     value = re.sub(r"\n{3,}", "\n\n", value)
     value = re.sub(r"[ \t]{2,}", " ", value)
@@ -26,21 +32,19 @@ def _table_to_text(value: str) -> str:
         root = html.fromstring(value)
     except (ValueError, html.ParserError):
         return value
-    for cell in root.xpath(".//th | .//td"):
+    # lxml-stubs cannot infer element-only results for these XPath expressions.
+    for cell in cast(list[Any], root.xpath(".//th | .//td")):
         cell.tail = "\t" + (cell.tail or "")
-    for row in root.xpath(".//tr"):
+    for row in cast(list[Any], root.xpath(".//tr")):
         row.tail = "\n" + (row.tail or "")
-    return root.text_content()
+    return cast(Any, root).text_content()
 
 
-def extract_plain_text(response: dict[str, Any]) -> str:
+def extract_plain_text(result: InferResult) -> str:
     """Preserve the page and block order supplied by PaddleOCR."""
-    pages = response.get("result", {}).get("layoutParsingResults", [])
     page_texts: list[str] = []
-    for page in pages:
-        if not isinstance(page, dict):
-            continue
-        blocks = page.get("prunedResult", {}).get("parsing_res_list", [])
+    for page in result.layout_parsing_results:
+        blocks = page.pruned_result.get("parsing_res_list", [])
         if not isinstance(blocks, list):
             continue
         rendered: list[str] = []

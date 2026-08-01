@@ -10,8 +10,10 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from pydantic import ValidationError
 
 from .config import PluginSettings
+from .schemas import ErrorResponse, InferRequest, InferResponse, InferResult
 
 RETRYABLE_STATUS_CODES = {408, 429, 502, 503, 504}
 
@@ -56,24 +58,24 @@ class PaddleOCRClient:
     def __exit__(self, *args: object) -> None:
         self._client.close()
 
-    def extract(self, document_path: Path, mime_type: str) -> dict[str, Any]:
+    def extract(self, document_path: Path, mime_type: str) -> InferResult:
         size = document_path.stat().st_size
         if size > self.settings.max_source_bytes:
             raise PaddleOCRProtocolError(f"source exceeds size limit: {size} bytes")
 
-        payload = {
-            "file": base64.b64encode(document_path.read_bytes()).decode("ascii"),
-            "fileType": 0 if mime_type == "application/pdf" else 1,
-            "useDocOrientationClassify": self.settings.use_orientation,
-            "useDocUnwarping": self.settings.use_unwarping,
-            "useLayoutDetection": True,
-            "useChartRecognition": self.settings.use_charts,
-            "useSealRecognition": self.settings.use_seals,
-            "formatBlockContent": False,
-            "prettifyMarkdown": False,
-            "returnMarkdownImages": False,
-            "visualize": False,
-        }
+        payload = InferRequest(
+            file=base64.b64encode(document_path.read_bytes()).decode("ascii"),
+            file_type=0 if mime_type == "application/pdf" else 1,
+            use_doc_orientation_classify=self.settings.use_orientation,
+            use_doc_unwarping=self.settings.use_unwarping,
+            use_layout_detection=True,
+            use_chart_recognition=self.settings.use_charts,
+            use_seal_recognition=self.settings.use_seals,
+            format_block_content=False,
+            prettify_markdown=False,
+            return_markdown_images=False,
+            visualize=False,
+        ).model_dump(by_alias=True)
 
         last_error: Exception | None = None
         for attempt in range(1, self.settings.max_attempts + 1):
@@ -81,14 +83,19 @@ class PaddleOCRClient:
                 response = self._client.post("/layout-parsing", json=payload)
                 self._validate_response_size(response)
                 if response.status_code in RETRYABLE_STATUS_CODES:
-                    raise PaddleOCRUnavailable(f"temporary HTTP status {response.status_code}")
+                    raise PaddleOCRUnavailable(
+                        f"temporary HTTP status {response.status_code}"
+                    )
+                if response.is_error:
+                    self._raise_error_response(response)
                 response.raise_for_status()
                 try:
                     data = response.json()
                 except json.JSONDecodeError as exc:
-                    raise PaddleOCRProtocolError("PaddleOCR returned non-JSON content") from exc
-                self.validate_response(data)
-                return data
+                    raise PaddleOCRProtocolError(
+                        "PaddleOCR returned non-JSON content"
+                    ) from exc
+                return self._parse_response(data)
             except PaddleOCRProtocolError:
                 raise
             except (
@@ -103,7 +110,9 @@ class PaddleOCRClient:
                 if attempt < self.settings.max_attempts:
                     time.sleep(random.uniform(0.75, 1.25) * 2 ** (attempt - 1))
             except httpx.HTTPStatusError as exc:
-                raise PaddleOCRProtocolError(f"PaddleOCR HTTP {exc.response.status_code}") from exc
+                raise PaddleOCRProtocolError(
+                    f"PaddleOCR HTTP {exc.response.status_code}"
+                ) from exc
 
         raise PaddleOCRUnavailable(
             f"PaddleOCR unavailable after {self.settings.max_attempts} attempts"
@@ -117,13 +126,33 @@ class PaddleOCRClient:
             raise PaddleOCRProtocolError("response exceeds configured size limit")
 
     @staticmethod
-    def validate_response(data: Any) -> None:
+    def _parse_response(data: Any) -> InferResult:
         if not isinstance(data, dict):
             raise PaddleOCRProtocolError("top-level response is not an object")
-        if data.get("errorCode", 0) not in (0, None):
+        if data.get("errorCode", 0) != 0:
+            try:
+                error = ErrorResponse.model_validate(data)
+            except ValidationError as exc:
+                raise PaddleOCRProtocolError(
+                    "PaddleOCR returned an invalid error response"
+                ) from exc
             raise PaddleOCRProtocolError(
-                f"PaddleOCR error {data.get('errorCode')}: {data.get('errorMsg', 'unknown')}"
+                f"PaddleOCR error {error.error_code}: {error.error_msg}"
             )
-        result = data.get("result")
-        if not isinstance(result, dict) or not isinstance(result.get("layoutParsingResults"), list):
-            raise PaddleOCRProtocolError("response has no layoutParsingResults array")
+        try:
+            return InferResponse.model_validate(data).result
+        except ValidationError as exc:
+            raise PaddleOCRProtocolError(
+                "PaddleOCR returned an invalid success response"
+            ) from exc
+
+    @staticmethod
+    def _raise_error_response(response: httpx.Response) -> None:
+        try:
+            data = response.json()
+            error = ErrorResponse.model_validate(data)
+        except (json.JSONDecodeError, ValidationError):
+            response.raise_for_status()
+        raise PaddleOCRProtocolError(
+            f"PaddleOCR error {error.error_code}: {error.error_msg}"
+        )

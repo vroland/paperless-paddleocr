@@ -37,9 +37,15 @@ class PaddleOCRVLParser:
         }
 
     @classmethod
-    def score(cls, mime_type: str, filename: str, path: Path | None = None) -> int | None:
+    def score(
+        cls, mime_type: str, filename: str, path: Path | None = None
+    ) -> int | None:
         config = PluginSettings.from_environment()
-        if not config.enabled or not config.base_url or mime_type not in cls.supported_mime_types():
+        if (
+            not config.enabled
+            or not config.base_url
+            or mime_type not in cls.supported_mime_types()
+        ):
             return None
         return config.score
 
@@ -73,12 +79,18 @@ class PaddleOCRVLParser:
     def configure(self, context: ParserContext) -> None:
         self._context = context
 
-    def parse(self, document_path: Path, mime_type: str, *, produce_archive: bool = True) -> None:
+    def parse(
+        self, document_path: Path, mime_type: str, *, produce_archive: bool = True
+    ) -> None:
         if mime_type not in self.supported_mime_types() or not document_path.is_file():
-            raise ParseError("PaddleOCR-VL received an unsupported or missing source file")
+            raise ParseError(
+                "PaddleOCR-VL received an unsupported or missing source file"
+            )
         try:
             with PaddleOCRClient(PluginSettings.from_environment()) as client:
-                self._text = extract_plain_text(client.extract(document_path, mime_type))
+                self._text = extract_plain_text(
+                    client.extract(document_path, mime_type)
+                )
             if not self._text:
                 raise ValueError("PaddleOCR returned no usable text")
         except ParseError:
@@ -106,7 +118,9 @@ class PaddleOCRVLParser:
         if mime_type == "application/pdf":
             from documents.parsers import make_thumbnail_from_pdf
 
-            return make_thumbnail_from_pdf(document_path, self._tempdir, self._logging_group)
+            return make_thumbnail_from_pdf(
+                document_path, self._tempdir, self._logging_group
+            )
         from PIL import Image, ImageOps
 
         output = self._tempdir / "thumbnail.webp"

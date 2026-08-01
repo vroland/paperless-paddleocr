@@ -5,7 +5,7 @@ from __future__ import annotations
 from . import __version__
 
 
-def parser_metadata() -> list[dict[str, str]]:
+def parser_metadata() -> list[object]:
     """Return static parser provenance without exposing service configuration."""
     return [
         {

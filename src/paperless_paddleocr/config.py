@@ -52,7 +52,9 @@ class PluginSettings:
             read_timeout=_get_float("PAPERLESS_PADDLEOCR_TIMEOUT_READ", 900.0),
             write_timeout=_get_float("PAPERLESS_PADDLEOCR_TIMEOUT_WRITE", 120.0),
             max_attempts=_get_int("PAPERLESS_PADDLEOCR_MAX_ATTEMPTS", 3),
-            max_source_bytes=_get_int("PAPERLESS_PADDLEOCR_MAX_BYTES", 100 * 1024 * 1024),
+            max_source_bytes=_get_int(
+                "PAPERLESS_PADDLEOCR_MAX_BYTES", 100 * 1024 * 1024
+            ),
             max_response_bytes=_get_int(
                 "PAPERLESS_PADDLEOCR_MAX_RESPONSE_BYTES", 200 * 1024 * 1024
             ),

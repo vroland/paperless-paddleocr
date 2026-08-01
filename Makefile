@@ -5,6 +5,7 @@ COMPOSE = docker compose --env-file dev/.env -f dev/compose.yaml
 check:
 	uv run ruff format --check .
 	uv run ruff check .
+	uv run mypy --show-error-codes --warn-unused-configs src/
 
 test:
 	uv run pytest -q
