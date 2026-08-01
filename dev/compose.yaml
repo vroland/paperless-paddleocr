@@ -1,0 +1,52 @@
+name: paperless-paddleocr-dev
+
+services:
+  broker:
+    image: docker.io/valkey/valkey:9-alpine
+    command: ["valkey-server", "--save", "", "--appendonly", "no"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  webserver:
+    build:
+      context: ..
+      dockerfile: dev/Dockerfile.paperless-dev
+      args:
+        PAPERLESS_TAG: "${PAPERLESS_TAG}"
+    image: paperless-paddleocr-dev:${PAPERLESS_TAG}
+    restart: unless-stopped
+    depends_on:
+      broker:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${PAPERLESS_PORT}:8000"
+    environment:
+      PAPERLESS_DBENGINE: sqlite
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_SECRET_KEY: "${PAPERLESS_SECRET_KEY}"
+      PAPERLESS_TIME_ZONE: "${PAPERLESS_TIME_ZONE}"
+      PAPERLESS_ADMIN_USER: "${PAPERLESS_ADMIN_USER}"
+      PAPERLESS_ADMIN_PASSWORD: "${PAPERLESS_ADMIN_PASSWORD}"
+      PAPERLESS_ADMIN_MAIL: "${PAPERLESS_ADMIN_MAIL}"
+      PAPERLESS_TASK_WORKERS: "1"
+      PAPERLESS_PADDLEOCR_URL: "${PAPERLESS_PADDLEOCR_URL}"
+      PAPERLESS_PADDLEOCR_SCORE: "${PAPERLESS_PADDLEOCR_SCORE}"
+      PAPERLESS_PADDLEOCR_MAX_IN_FLIGHT: "1"
+      PAPERLESS_PADDLEOCR_FALLBACK: fail
+      PAPERLESS_PADDLEOCR_STORE_JSON: "false"
+      PYTHONPATH: /workspace/paperless-paddleocr/src
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ../src:/workspace/paperless-paddleocr/src:ro
+      - paperless-data:/usr/src/paperless/data
+      - paperless-media:/usr/src/paperless/media
+      - ./consume:/usr/src/paperless/consume
+      - ./export:/usr/src/paperless/export
+
+volumes:
+  paperless-data:
+  paperless-media:

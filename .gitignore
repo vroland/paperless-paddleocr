@@ -1,0 +1,16 @@
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+plans/
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.egg-info/
+dev/.env
+dev/consume/*
+!dev/consume/.gitkeep
+.idea/
+.vscode/
+.code/
