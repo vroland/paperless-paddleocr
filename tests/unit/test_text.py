@@ -23,7 +23,23 @@ def test_normalized_text_preserves_page_and_block_order() -> None:
             normalize_layout_page(first_page, 0, 1, 1, 1.0).text,
             normalize_layout_page(second_page, 1, 1, 1, 1.0).text,
         ]
-    ) == ("Invoice\n\nSupplier: Example GmbH\n\n\f\n\nTotal: EUR 120.00")
+    ) == ("Invoice\n\nPage 1\n\nSupplier: Example GmbH\n\n\f\n\nTotal: EUR 120.00")
+
+
+def test_normalized_text_can_exclude_headers_and_footers() -> None:
+    page = _page(
+        [
+            {"block_label": "header", "block_content": "ACME Corp"},
+            {"block_label": "text", "block_content": "Invoice total"},
+            {"block_label": "footer", "block_content": "Terms apply"},
+            {"block_label": "number", "block_content": "Page 1"},
+        ]
+    )
+
+    assert (
+        normalize_layout_page(page, 0, 1, 1, 1.0, include_headers_footers=False).text
+        == "Invoice total"
+    )
 
 
 def test_normalized_text_flattens_html_tables() -> None:

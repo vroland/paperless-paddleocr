@@ -42,6 +42,10 @@ multiline blocks, tables, and vertical text. If any page has invalid geometry,
 the plugin retains the complete Paddle text but omits the archive rather than
 publish a partial text layer.
 
+Header and footer text is included in search and archives by default. Set
+`PAPERLESS_PADDLEOCR_INCLUDE_HEADERS_FOOTERS=false` to exclude it; page-number
+blocks are always omitted.
+
 ## Local development
 
 The development stack runs Paperless with SQLite and Valkey locally. It

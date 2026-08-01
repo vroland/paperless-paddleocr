@@ -89,7 +89,13 @@ class PaddleOcrVLEngine(OcrEngine):
                 pruned_width == width and pruned_height == height
             )
         page = normalize_layout_page(
-            raw_page, page_number, width, height, dpi, dimensions_match
+            raw_page,
+            page_number,
+            width,
+            height,
+            dpi,
+            dimensions_match,
+            settings.include_headers_footers,
         )
         write_page_status(Path(status_dir), page_number, page.geometry_safe)
         return build_page_element(page), page.text

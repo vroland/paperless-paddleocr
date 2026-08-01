@@ -14,6 +14,7 @@ def test_settings_use_safe_defaults(monkeypatch) -> None:
     assert settings.max_attempts == 3
     assert settings.backoff_initial_seconds == 1.0
     assert settings.backoff_max_seconds == 30.0
+    assert settings.include_headers_footers is True
 
 
 def test_settings_read_environment(monkeypatch) -> None:
@@ -22,6 +23,7 @@ def test_settings_read_environment(monkeypatch) -> None:
     monkeypatch.setenv("PAPERLESS_PADDLEOCR_SCORE", "31")
     monkeypatch.setenv("PAPERLESS_PADDLEOCR_BACKOFF_INITIAL_SECONDS", "2.5")
     monkeypatch.setenv("PAPERLESS_PADDLEOCR_BACKOFF_MAX_SECONDS", "12")
+    monkeypatch.setenv("PAPERLESS_PADDLEOCR_INCLUDE_HEADERS_FOOTERS", "false")
 
     settings = PluginSettings.from_environment()
 
@@ -30,6 +32,7 @@ def test_settings_read_environment(monkeypatch) -> None:
     assert settings.score == 31
     assert settings.backoff_initial_seconds == 2.5
     assert settings.backoff_max_seconds == 12.0
+    assert settings.include_headers_footers is False
 
 
 def test_settings_reject_invalid_backoff_range(monkeypatch) -> None:

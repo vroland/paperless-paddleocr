@@ -39,6 +39,7 @@ class PluginSettings:
     max_response_bytes: int
     use_charts: bool
     use_seals: bool
+    include_headers_footers: bool
 
     @classmethod
     def from_environment(cls) -> PluginSettings:
@@ -73,4 +74,7 @@ class PluginSettings:
             ),
             use_charts=_get_bool("PAPERLESS_PADDLEOCR_USE_CHARTS", False),
             use_seals=_get_bool("PAPERLESS_PADDLEOCR_USE_SEALS", False),
+            include_headers_footers=_get_bool(
+                "PAPERLESS_PADDLEOCR_INCLUDE_HEADERS_FOOTERS", True
+            ),
         )

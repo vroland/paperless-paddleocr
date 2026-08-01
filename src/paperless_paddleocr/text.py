@@ -11,9 +11,8 @@ from lxml import html
 
 from .archive.models import NormalizedBlock, NormalizedPage, Point
 
-IGNORED_LABELS = frozenset(
-    {"header", "header_image", "footer", "footer_image", "number"}
-)
+HEADER_FOOTER_LABELS = frozenset({"header", "header_image", "footer", "footer_image"})
+IGNORED_LABELS = frozenset({"number"})
 
 
 def _normalize(value: str) -> str:
@@ -55,12 +54,14 @@ def normalize_layout_page(
     height: int,
     dpi: float,
     dimensions_match: bool = True,
+    include_headers_footers: bool = True,
 ) -> NormalizedPage:
     """Normalize ordered Paddle blocks while retaining text with unsafe geometry.
 
-    Headers, footers, and page numbers are omitted; tables are flattened and
-    malformed blocks skipped. Geometry is safe only when dimensions match and
-    every retained block has a valid bounding box.
+    Page numbers are omitted. Headers and footers can be omitted by setting
+    ``include_headers_footers`` to false. Tables are flattened and malformed
+    blocks skipped. Geometry is safe only when dimensions match and every
+    retained block has a valid bounding box.
     """
     raw_blocks = page.pruned_result.get("parsing_res_list", [])
     normalized_blocks: list[NormalizedBlock] = []
@@ -69,7 +70,9 @@ def normalize_layout_page(
             if not isinstance(raw_block, dict):
                 continue
             label = str(raw_block.get("block_label") or "")
-            if label in IGNORED_LABELS:
+            if label in IGNORED_LABELS or (
+                not include_headers_footers and label in HEADER_FOOTER_LABELS
+            ):
                 continue
             content = raw_block.get("block_content")
             if not isinstance(content, str):

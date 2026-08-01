@@ -41,6 +41,7 @@ def _settings() -> PluginSettings:
         max_response_bytes=1024,
         use_charts=False,
         use_seals=False,
+        include_headers_footers=True,
     )
 
 
