@@ -23,19 +23,21 @@ class InferRequest(PaddleOCRModel):
     file: str = Field(
         description="Source document supplied to the layout-parsing endpoint."
     )
-    file_type: Literal[0, 1] = Field(
-        description="File-type selector: 0 for PDF and 1 for image."
+    file_type: Literal[1] = Field(
+        default=1, description="Image input for one OCRmyPDF-rendered page."
     )
-    use_doc_orientation_classify: bool = Field(
+    use_doc_orientation_classify: Literal[False] = Field(
+        default=False,
         description=(
-            "Whether the service should run document-orientation classification."
-        )
+            "OCRmyPDF supplies the page orientation, so classification is disabled."
+        ),
     )
-    use_doc_unwarping: bool = Field(
-        description="Whether the service should run document unwarping."
+    use_doc_unwarping: Literal[False] = Field(
+        default=False,
+        description="OCRmyPDF geometry must be preserved, so unwarping is disabled.",
     )
-    use_layout_detection: bool = Field(
-        description="Whether the service should run layout detection."
+    use_layout_detection: Literal[True] = Field(
+        default=True, description="Layout detection is required."
     )
     use_chart_recognition: bool = Field(
         description="Whether the service should run chart recognition."
@@ -43,19 +45,22 @@ class InferRequest(PaddleOCRModel):
     use_seal_recognition: bool = Field(
         description="Whether the service should run seal recognition."
     )
-    format_block_content: bool = Field(
-        description="Whether the service should format the content of layout blocks."
+    format_block_content: Literal[False] = Field(
+        default=False,
+        description="Whether the service should format the content of layout blocks.",
     )
-    prettify_markdown: bool = Field(
-        description="Whether the service should prettify markdown output."
+    prettify_markdown: Literal[False] = Field(
+        default=False,
+        description="Whether the service should prettify markdown output.",
     )
-    return_markdown_images: bool = Field(
+    return_markdown_images: Literal[False] = Field(
+        default=False,
         description=(
             "Whether the service should return images referenced by markdown output."
-        )
+        ),
     )
-    visualize: bool = Field(
-        description="Whether the service should produce visualizations."
+    visualize: Literal[False] = Field(
+        default=False, description="Whether the service should produce visualizations."
     )
 
 
@@ -87,33 +92,12 @@ class ImageInfo(PaddleOCRModel):
     )
 
 
-class PDFPageInfo(PaddleOCRModel):
-    width: int = Field(description="Reported page width.")
-    height: int = Field(description="Reported page height.")
-
-
-class PDFInfo(PaddleOCRModel):
-    num_pages: int = Field(description="Number of pages in the PDF.")
-    pages: list[PDFPageInfo] = Field(description="Dimensions of each PDF page.")
-    type: Literal["pdf"] = Field(
-        default="pdf", description="Always `pdf` for PDF input."
-    )
-
-
-class TIFFInfo(PaddleOCRModel):
-    num_pages: int = Field(description="Number of pages in the TIFF.")
-    pages: list[PDFPageInfo] = Field(description="Dimensions of each TIFF page.")
-    type: Literal["tiff"] = Field(
-        default="tiff", description="Always `tiff` for TIFF input."
-    )
-
-
 class InferResult(PaddleOCRModel):
     layout_parsing_results: list[LayoutParsingResult] = Field(
         description="Layout-parsing result for each input page."
     )
-    data_info: ImageInfo | PDFInfo | TIFFInfo = Field(
-        description="Input-document metadata supplied by the service."
+    data_info: ImageInfo = Field(
+        description="Rendered-page metadata supplied by the service."
     )
 
 

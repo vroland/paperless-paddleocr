@@ -39,7 +39,7 @@ def _write_pdf(path: Path, text: str, *, tagged: bool) -> None:
     ("text", "tagged", "expected_score"),
     [
         ("", False, 21),
-        ("x" * 48, False, 21),
+        ("x" * 48, False, None),
         ("x" * 49, False, None),
         ("short", True, None),
     ],

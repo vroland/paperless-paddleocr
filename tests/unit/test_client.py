@@ -28,8 +28,6 @@ def _settings() -> PluginSettings:
         backoff_max_seconds=30,
         max_source_bytes=1024,
         max_response_bytes=1024,
-        use_orientation=True,
-        use_unwarping=False,
         use_charts=True,
         use_seals=False,
     )
@@ -64,11 +62,11 @@ def _client(
     return client
 
 
-def test_extract_serializes_document_as_documented_request(
+def test_extract_page_serializes_image_as_documented_request(
     tmp_path: Path,
 ) -> None:
-    document = tmp_path / "invoice.pdf"
-    document.write_bytes(b"%PDF")
+    document = tmp_path / "invoice.png"
+    document.write_bytes(b"png")
     requests: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -76,7 +74,7 @@ def test_extract_serializes_document_as_documented_request(
         return httpx.Response(200, json=_success_response())
 
     with _client(httpx.MockTransport(handler)) as client:
-        result = client.extract(document, "application/pdf")
+        result = client.extract_page(document)
 
     assert result.data_info.width == 1200
     assert len(requests) == 1
@@ -85,9 +83,9 @@ def test_extract_serializes_document_as_documented_request(
     assert request.url == "https://paddleocr.example.test/layout-parsing"
     assert request.headers["Authorization"] == "Bearer test-key"
     assert json.loads(request.content) == {
-        "file": base64.b64encode(b"%PDF").decode("ascii"),
-        "fileType": 0,
-        "useDocOrientationClassify": True,
+        "file": base64.b64encode(b"png").decode("ascii"),
+        "fileType": 1,
+        "useDocOrientationClassify": False,
         "useDocUnwarping": False,
         "useLayoutDetection": True,
         "useChartRecognition": True,
@@ -117,7 +115,7 @@ def test_extract_reports_documented_error_response(tmp_path: Path) -> None:
         _client(httpx.MockTransport(handler)) as client,
         pytest.raises(PaddleOCRError, match="PaddleOCR error 1001: invalid document"),
     ):
-        client.extract(document, "image/png")
+        client.extract_page(document)
 
 
 def test_extract_rejects_malformed_success_response(tmp_path: Path) -> None:
@@ -135,7 +133,7 @@ def test_extract_rejects_malformed_success_response(tmp_path: Path) -> None:
         _client(httpx.MockTransport(handler)) as client,
         pytest.raises(PaddleOCRProtocolError, match="invalid success response"),
     ):
-        client.extract(document, "image/png")
+        client.extract_page(document)
 
 
 def test_extract_uses_configured_capped_backoff(tmp_path: Path, monkeypatch) -> None:
@@ -166,7 +164,7 @@ def test_extract_uses_configured_capped_backoff(tmp_path: Path, monkeypatch) -> 
     )
 
     with _client(httpx.MockTransport(handler), settings) as client:
-        result = client.extract(document, "image/png")
+        result = client.extract_page(document)
 
     assert result.data_info.width == 1200
     assert attempts == 3

@@ -1,64 +1,39 @@
-from paperless_paddleocr.schemas import InferResult
-from paperless_paddleocr.text import extract_plain_text
+from paperless_paddleocr.schemas import LayoutParsingResult
+from paperless_paddleocr.text import compose_document_text, normalize_layout_page
 
 
-def _result(pages: list[dict[str, object]]) -> InferResult:
-    return InferResult.model_validate(
-        {
-            "layoutParsingResults": [
-                {**page, "markdown": {"text": ""}} for page in pages
-            ],
-            "dataInfo": {"width": 1, "height": 1},
-        }
+def _page(blocks: list[dict[str, object]]) -> LayoutParsingResult:
+    return LayoutParsingResult.model_validate(
+        {"prunedResult": {"parsing_res_list": blocks}, "markdown": {"text": ""}}
     )
 
 
-def test_extract_plain_text_preserves_page_and_block_order() -> None:
-    result = _result(
+def test_normalized_text_preserves_page_and_block_order() -> None:
+    first_page = _page(
         [
-            {
-                "prunedResult": {
-                    "parsing_res_list": [
-                        {"block_label": "doc_title", "block_content": "Invoice"},
-                        {"block_label": "footer", "block_content": "Page 1"},
-                        {
-                            "block_label": "text",
-                            "block_content": "Supplier: Example GmbH",
-                        },
-                    ]
-                }
-            },
-            {
-                "prunedResult": {
-                    "parsing_res_list": [
-                        {"block_label": "text", "block_content": "Total: EUR 120.00"}
-                    ]
-                }
-            },
+            {"block_label": "doc_title", "block_content": "Invoice"},
+            {"block_label": "footer", "block_content": "Page 1"},
+            {"block_label": "text", "block_content": "Supplier: Example GmbH"},
         ]
     )
+    second_page = _page([{"block_label": "text", "block_content": "Total: EUR 120.00"}])
 
-    assert extract_plain_text(result) == (
-        "Invoice\n\nSupplier: Example GmbH\n\n\f\n\nTotal: EUR 120.00"
-    )
+    assert compose_document_text(
+        [
+            normalize_layout_page(first_page, 0, 1, 1, 1.0).text,
+            normalize_layout_page(second_page, 1, 1, 1, 1.0).text,
+        ]
+    ) == ("Invoice\n\nSupplier: Example GmbH\n\n\f\n\nTotal: EUR 120.00")
 
 
-def test_extract_plain_text_flattens_html_tables() -> None:
-    result = _result(
+def test_normalized_text_flattens_html_tables() -> None:
+    page = _page(
         [
             {
-                "prunedResult": {
-                    "parsing_res_list": [
-                        {
-                            "block_label": "table",
-                            "block_content": (
-                                "<table><tr><td>Item</td><td>Total</td></tr></table>"
-                            ),
-                        }
-                    ]
-                }
+                "block_label": "table",
+                "block_content": "<table><tr><td>Item</td><td>Total</td></tr></table>",
             }
         ]
     )
 
-    assert extract_plain_text(result) == "Item\tTotal"
+    assert normalize_layout_page(page, 0, 1, 1, 1.0).text == "Item\tTotal"

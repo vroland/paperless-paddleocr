@@ -58,23 +58,21 @@ class PaddleOCRClient:
     def __exit__(self, *args: object) -> None:
         self._client.close()
 
-    def extract(self, document_path: Path, mime_type: str) -> InferResult:
-        size = document_path.stat().st_size
+    def extract_page(self, image_path: Path) -> InferResult:
+        """Submit one rendered page with bounded, retrying HTTP transport.
+
+        Protocol and permanent HTTP failures fail immediately. Connection
+        failures, timeouts, and selected transient statuses use capped,
+        jittered exponential backoff.
+        """
+        size = image_path.stat().st_size
         if size > self.settings.max_source_bytes:
             raise PaddleOCRProtocolError(f"source exceeds size limit: {size} bytes")
 
         payload = InferRequest(
-            file=base64.b64encode(document_path.read_bytes()).decode("ascii"),
-            file_type=0 if mime_type == "application/pdf" else 1,
-            use_doc_orientation_classify=self.settings.use_orientation,
-            use_doc_unwarping=self.settings.use_unwarping,
-            use_layout_detection=True,
+            file=base64.b64encode(image_path.read_bytes()).decode("ascii"),
             use_chart_recognition=self.settings.use_charts,
             use_seal_recognition=self.settings.use_seals,
-            format_block_content=False,
-            prettify_markdown=False,
-            return_markdown_images=False,
-            visualize=False,
         ).model_dump(by_alias=True)
 
         last_error: Exception | None = None
@@ -135,6 +133,7 @@ class PaddleOCRClient:
 
     @staticmethod
     def _parse_response(data: Any) -> InferResult:
+        """Validate a success or service-error envelope into one result."""
         if not isinstance(data, dict):
             raise PaddleOCRProtocolError("top-level response is not an object")
         if data.get("errorCode", 0) != 0:

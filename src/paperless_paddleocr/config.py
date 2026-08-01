@@ -37,13 +37,12 @@ class PluginSettings:
     backoff_max_seconds: float
     max_source_bytes: int
     max_response_bytes: int
-    use_orientation: bool
-    use_unwarping: bool
     use_charts: bool
     use_seals: bool
 
     @classmethod
     def from_environment(cls) -> PluginSettings:
+        """Load plugin settings and validate the retry backoff bounds."""
         base_url = os.getenv("PAPERLESS_PADDLEOCR_URL", "").strip() or None
         backoff_initial_seconds = _get_float(
             "PAPERLESS_PADDLEOCR_BACKOFF_INITIAL_SECONDS", 1.0
@@ -72,8 +71,6 @@ class PluginSettings:
             max_response_bytes=_get_int(
                 "PAPERLESS_PADDLEOCR_MAX_RESPONSE_BYTES", 200 * 1024 * 1024
             ),
-            use_orientation=_get_bool("PAPERLESS_PADDLEOCR_USE_ORIENTATION", False),
-            use_unwarping=_get_bool("PAPERLESS_PADDLEOCR_USE_UNWARPING", False),
             use_charts=_get_bool("PAPERLESS_PADDLEOCR_USE_CHARTS", False),
             use_seals=_get_bool("PAPERLESS_PADDLEOCR_USE_SEALS", False),
         )

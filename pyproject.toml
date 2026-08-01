@@ -14,8 +14,11 @@ dependencies = [
   "lxml>=5,<7",
   "Pillow>=11",
   "pydantic>=2,<3",
-  "pypdf>=5,<7",
+  "ocrmypdf~=17.4.2",
 ]
+
+[project.urls]
+Repository = "https://github.com/vroland/paperless_paddleocr"
 
 [project.entry-points."paperless_ngx.parsers"]
 paddleocr_vl = "paperless_paddleocr.parser:PaddleOCRVLParser"

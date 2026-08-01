@@ -1,8 +1,12 @@
-from paperless_paddleocr.metadata import parser_metadata
+from pathlib import Path
+
+from paperless_paddleocr.parser import PaddleOCRVLParser
 
 
 def test_parser_metadata_identifies_the_parser_without_service_details() -> None:
-    assert parser_metadata() == [
+    parser = object.__new__(PaddleOCRVLParser)
+
+    assert parser.extract_metadata(Path("document.pdf"), "application/pdf") == [
         {
             "namespace": "urn:paperless-paddleocr:metadata",
             "prefix": "paddleocr",

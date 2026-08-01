@@ -1,16 +1,18 @@
 # Paperless PaddleOCR
 
 Paperless-ngx parser plugin that delegates PDF and image OCR to a separately
-deployed PaddleOCR-VL service. It sends supported documents to the service's
-`/layout-parsing` endpoint and returns normalized text for Paperless search.
-The plugin does not bundle or run OCR models itself.
+deployed PaddleOCR-VL service. It sends OCRmyPDF-rendered page images to the
+service's `/layout-parsing` endpoint, returns normalized text for Paperless
+search, and produces searchable PDF/PDF-A archives. The plugin does not bundle
+or run OCR models itself.
 
 ## Components
 
 - **Paperless-ngx** imports, stores, and indexes documents, then selects this
   parser for supported PDFs and images.
-- **paperless-paddleocr** sends the document to PaddleOCR-VL and converts its
-  layout-parsing response into searchable text.
+- **paperless-paddleocr** stages image inputs as PDFs, sends one rendered page
+  image at a time to PaddleOCR-VL, and uses the same normalized response for
+  searchable text and the archive text layer.
 - **PaddleOCR-VL service** runs separately and must expose a reachable
   `/layout-parsing` HTTP endpoint. Configure its URL with
   `PAPERLESS_PADDLEOCR_URL`; it owns the OCR model and any service-specific
@@ -18,11 +20,27 @@ The plugin does not bundle or run OCR models itself.
 
 ## Native-text PDFs
 
-For PDFs with a usable native text layer, the plugin declines parser selection
-and lets Paperless use its normal PDF parser and archive policy. It uses the
-same rule as Paperless's default OCR mode: extracted text must be nonempty and
-either the PDF is tagged or the text exceeds 50 characters. Scanned PDFs,
-short untagged PDFs, and images continue to use PaddleOCR-VL.
+For PDFs with any extractable native text, the plugin declines parser selection
+and lets Paperless use its normal PDF parser and archive policy. Scanned PDFs
+and JPEG, PNG, and TIFF images continue to use PaddleOCR-VL. Mixed native-text
+and scanned PDFs are deliberately delegated rather than partially re-OCRed.
+
+## Archives
+
+The plugin creates PDF/PDF-A archives using Paperless's configured output type
+and color conversion settings. JPEG, PNG, and every frame of a TIFF are first
+wrapped as a PDF, so alpha PNGs, missing DPI metadata, and multipage TIFFs are
+supported without a visible-page raster replacement.
+
+PaddleOCR-VL is the only recognizer. OCRmyPDF 17.4.2 still requires Tesseract
+to be installed for preflight, but Tesseract recognition is never selected.
+
+Paddle's current response contains block geometry but not documented line or
+word geometry. Archives therefore have searchable and copyable text with
+coarse placement; selection rectangles and copy order can be approximate for
+multiline blocks, tables, and vertical text. If any page has invalid geometry,
+the plugin retains the complete Paddle text but omits the archive rather than
+publish a partial text layer.
 
 ## Local development
 
