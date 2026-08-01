@@ -108,7 +108,7 @@ class PaddleOCRClient:
             ) as exc:
                 last_error = exc
                 if attempt < self.settings.max_attempts:
-                    time.sleep(random.uniform(0.75, 1.25) * 2 ** (attempt - 1))
+                    time.sleep(self._retry_delay(attempt))
             except httpx.HTTPStatusError as exc:
                 raise PaddleOCRProtocolError(
                     f"PaddleOCR HTTP {exc.response.status_code}"
@@ -124,6 +124,14 @@ class PaddleOCRClient:
             raise PaddleOCRProtocolError("response exceeds configured size limit")
         if len(response.content) > self.settings.max_response_bytes:
             raise PaddleOCRProtocolError("response exceeds configured size limit")
+
+    def _retry_delay(self, attempt: int) -> float:
+        return min(
+            random.uniform(0.75, 1.25)
+            * self.settings.backoff_initial_seconds
+            * 2 ** (attempt - 1),
+            self.settings.backoff_max_seconds,
+        )
 
     @staticmethod
     def _parse_response(data: Any) -> InferResult:

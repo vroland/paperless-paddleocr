@@ -33,6 +33,8 @@ class PluginSettings:
     read_timeout: float
     write_timeout: float
     max_attempts: int
+    backoff_initial_seconds: float
+    backoff_max_seconds: float
     max_source_bytes: int
     max_response_bytes: int
     use_orientation: bool
@@ -43,6 +45,16 @@ class PluginSettings:
     @classmethod
     def from_environment(cls) -> PluginSettings:
         base_url = os.getenv("PAPERLESS_PADDLEOCR_URL", "").strip() or None
+        backoff_initial_seconds = _get_float(
+            "PAPERLESS_PADDLEOCR_BACKOFF_INITIAL_SECONDS", 1.0
+        )
+        backoff_max_seconds = _get_float(
+            "PAPERLESS_PADDLEOCR_BACKOFF_MAX_SECONDS", 30.0
+        )
+        if backoff_initial_seconds < 0 or backoff_max_seconds < backoff_initial_seconds:
+            raise ValueError(
+                "PaddleOCR backoff settings must be non-negative and ordered"
+            )
         return cls(
             enabled=_get_bool("PAPERLESS_PADDLEOCR_ENABLED", True),
             base_url=base_url,
@@ -52,6 +64,8 @@ class PluginSettings:
             read_timeout=_get_float("PAPERLESS_PADDLEOCR_TIMEOUT_READ", 900.0),
             write_timeout=_get_float("PAPERLESS_PADDLEOCR_TIMEOUT_WRITE", 120.0),
             max_attempts=_get_int("PAPERLESS_PADDLEOCR_MAX_ATTEMPTS", 3),
+            backoff_initial_seconds=backoff_initial_seconds,
+            backoff_max_seconds=backoff_max_seconds,
             max_source_bytes=_get_int(
                 "PAPERLESS_PADDLEOCR_MAX_BYTES", 100 * 1024 * 1024
             ),
