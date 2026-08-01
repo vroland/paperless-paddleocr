@@ -68,7 +68,7 @@ def _inspect_image(document_path: Path) -> int:
     """
     try:
         with Image.open(document_path) as image:
-            frames = image.n_frames
+            frames = getattr(image, "n_frames", 1)
             for frame_number in range(frames):
                 image.seek(frame_number)
                 orientation = image.getexif().get(274, 1)

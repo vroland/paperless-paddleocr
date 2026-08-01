@@ -83,6 +83,16 @@ def test_multipage_tiff_is_staged_as_matching_pdf_pages(tmp_path: Path) -> None:
     assert staged.is_file()
 
 
+def test_jpeg_is_staged_as_single_pdf_page(tmp_path: Path) -> None:
+    source = tmp_path / "source.jpg"
+    Image.new("RGB", (20, 10), "white").save(source, dpi=(100, 100))
+    staged = tmp_path / "source.pdf"
+
+    assert image_page_count(source, "image/jpeg") == 1
+    assert stage_image_pdf(source, "image/jpeg", staged, None) == 1
+    assert staged.is_file()
+
+
 def test_engine_returns_normalized_text_and_records_status(
     tmp_path: Path, monkeypatch
 ) -> None:
