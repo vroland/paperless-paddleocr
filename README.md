@@ -16,6 +16,14 @@ The plugin does not bundle or run OCR models itself.
   `PAPERLESS_PADDLEOCR_URL`; it owns the OCR model and any service-specific
   configuration.
 
+## Native-text PDFs
+
+For PDFs with a usable native text layer, the plugin declines parser selection
+and lets Paperless use its normal PDF parser and archive policy. It uses the
+same rule as Paperless's default OCR mode: extracted text must be nonempty and
+either the PDF is tagged or the text exceeds 50 characters. Scanned PDFs,
+short untagged PDFs, and images continue to use PaddleOCR-VL.
+
 ## Local development
 
 The development stack runs Paperless with SQLite and Valkey locally. It

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
 import tempfile
 from datetime import datetime
@@ -12,13 +13,28 @@ from typing import Self
 from django.conf import settings
 from documents.parsers import ParseError
 from paperless.parsers import ParserContext
-from paperless.parsers.utils import get_page_count_for_pdf
+from paperless.parsers.utils import (
+    PDF_TEXT_MIN_LENGTH,
+    extract_pdf_text,
+    get_page_count_for_pdf,
+    is_tagged_pdf,
+)
 
 from . import __version__
 from .client import PaddleOCRClient
 from .config import PluginSettings
 from .metadata import parser_metadata
 from .text import extract_plain_text
+
+logger = logging.getLogger("paperless.parsing.paddleocr")
+
+
+# TODO: Use a public Paperless born-digital helper when available after v3.0.4.
+def _has_native_pdf_text(document_path: Path) -> bool:
+    text = extract_pdf_text(document_path)
+    return bool(text) and (
+        is_tagged_pdf(document_path) or len(text) > PDF_TEXT_MIN_LENGTH
+    )
 
 
 class PaddleOCRVLParser:
@@ -46,6 +62,9 @@ class PaddleOCRVLParser:
             or not config.base_url
             or mime_type not in cls.supported_mime_types()
         ):
+            return None
+        if mime_type == "application/pdf" and path and _has_native_pdf_text(path):
+            logger.info("PaddleOCR-VL Parser declined native-text PDF: %s", filename)
             return None
         return config.score
 
